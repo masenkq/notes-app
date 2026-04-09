@@ -134,6 +134,25 @@ export default function Home() {
       <div className="max-w-4xl mx-auto">
         
         {/* Hlavička */}
+    
+        <div className="flex justify-between items-center bg-white p-6 rounded shadow mb-8">
+          <h1 className="text-2xl font-bold">Přihlášen: {session.user?.name}</h1>
+          <div className="flex gap-4">
+            <button
+              onClick={() => window.open("/api/notes/export", "_blank")}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+              title="Stáhnout všechny poznámky"
+            >
+              Exportovat vše (JSON)
+            </button>
+            <button
+              onClick={() => signOut()}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+            >
+              Odhlásit se
+            </button>
+          </div>
+        </div>
         <div className="flex justify-between items-center bg-white p-6 rounded shadow mb-8">
           <h1 className="text-2xl font-bold">Přihlášen: {session.user?.name}</h1>
           <button
@@ -206,8 +225,11 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      {/* Tlačítka pro mazání a editaci */}
+                      {/* Tlačítka pro export, mazání a editaci */}
                       <div className="absolute top-4 right-4 flex gap-3 text-xl">
+                        <button onClick={() => window.open(`/api/notes/export?id=${note.id}`, "_blank")} className="hover:scale-110 transition" title="Exportovat poznámku">
+                          ⬇️
+                        </button>
                         <button onClick={() => startEditing(note)} className="hover:scale-110 transition" title="Upravit záznam">
                           ✏️
                         </button>
