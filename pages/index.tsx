@@ -8,6 +8,7 @@ interface Note {
   title: string;
   content: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export default function Home() {
@@ -221,7 +222,10 @@ export default function Home() {
                       )}
                       <p className="text-xs text-gray-400 mt-4">
                         Vytvořeno: {new Date(note.createdAt).toLocaleString('cs-CZ')}
+                        <br />
+                    Poslední úprava: {new Date(note.updatedAt).toLocaleString('cs-CZ')}
                       </p>
+                      
                     </>
                   )}
                 </div>
