@@ -1,7 +1,6 @@
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
-
+import { useState, useEffect, useRef } from "react";
 // 1. Definice datového typu pro poznámku
 interface Note {
   id: number;
@@ -24,6 +23,39 @@ export default function Home() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Přečteme soubor a uděláme z něj JSON
+      const fileContent = await file.text();
+      const jsonData = JSON.parse(fileContent);
+
+      // Pošleme data na náš nový import endpoint
+      const res = await fetch("/api/notes/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(jsonData),
+      });
+
+      if (res.ok) {
+        alert("Poznámky byly úspěšně importovány!");
+        fetchNotes(); // Obnoví seznam poznámek
+      } else {
+        const errorData = await res.json();
+        alert(`Chyba importu: ${errorData.message}`);
+      }
+    } catch (error) {
+      alert("Soubor se nepodařilo přečíst. Zkontrolujte, zda jde o platný JSON.");
+    } finally {
+      // Vyčistíme input, aby šel případně nahrát znovu stejný soubor
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
   // 2. Asynchronní funkce pro HTTP GET požadavek
   const fetchNotes = async () => {
     try {
@@ -134,10 +166,29 @@ export default function Home() {
       <div className="max-w-4xl mx-auto">
         
         {/* Hlavička */}
-    
+ 
         <div className="flex justify-between items-center bg-white p-6 rounded shadow mb-8">
           <h1 className="text-2xl font-bold">Přihlášen: {session.user?.name}</h1>
           <div className="flex gap-4">
+            
+            {/* Skrytý input pro File API */}
+            <input
+              type="file"
+              accept=".json"
+              ref={fileInputRef}
+              onChange={handleImport}
+              className="hidden"
+            />
+            
+            {/* Nové zelené tlačítko pro Import */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
+              title="Nahrát poznámky z JSON souboru"
+            >
+              Importovat (JSON)
+            </button>
+
             <button
               onClick={() => window.open("/api/notes/export", "_blank")}
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
@@ -145,24 +196,17 @@ export default function Home() {
             >
               Exportovat vše (JSON)
             </button>
+
             <button
               onClick={() => signOut()}
               className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
             >
               Odhlásit se
             </button>
+
           </div>
         </div>
-        <div className="flex justify-between items-center bg-white p-6 rounded shadow mb-8">
-          <h1 className="text-2xl font-bold">Přihlášen: {session.user?.name}</h1>
-          <button
-            onClick={() => signOut()}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
-          >
-            Odhlásit se
-          </button>
-        </div>
-
+      
         {/* Formulář pro novou poznámku */}
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-8">
           <h2 className="text-xl font-semibold mb-4">Nová poznámka</h2>

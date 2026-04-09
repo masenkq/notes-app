@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 
 export default function Login() {
   const router = useRouter();
@@ -68,7 +69,15 @@ export default function Login() {
             Přihlásit se
           </button>
         </form>
+        <div className="mt-4 text-center text-sm text-gray-600">
+          Nemáš ještě účet?{" "}
+          <Link href="/register" className="text-blue-600 hover:underline">
+            Zaregistrovat se
+          </Link>
+        </div>
       </div>
+      
     </div>
+    
   );
 }
