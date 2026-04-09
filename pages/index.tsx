@@ -12,13 +12,17 @@ interface Note {
 
 export default function Home() {
   const { data: session, status } = useSession();
-  
-  // Lokální stavy komponenty
+
+// Lokální stavy komponenty
   const [notes, setNotes] = useState<Note[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-
+  
+  // Stavy pro režim editace
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
   // 2. Asynchronní funkce pro HTTP GET požadavek
   const fetchNotes = async () => {
     try {
@@ -64,7 +68,48 @@ export default function Home() {
       console.error("Chyba při odesílání dat", error);
     }
   };
+// Obsluha odstranění (HTTP DELETE požadavek)
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Opravdu chcete tento záznam trvale odstranit?")) return;
 
+    try {
+      const res = await fetch(`/api/notes/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        // Filtrace pole a aktualizace lokálního stavu => zamezení zbytečného znovunačítání stránky
+        setNotes(notes.filter((note) => note.id !== id));
+      }
+    } catch (error) {
+      console.error("Chyba sítě při odstraňování záznamu", error);
+    }
+  };
+
+  // Přepnutí do režimu editace
+  const startEditing = (note: Note) => {
+    setEditingId(note.id);
+    setEditTitle(note.title);
+    setEditContent(note.content || "");
+  };
+
+  // Uložení upravené poznámky (HTTP PUT)
+  const handleUpdate = async (id: number) => {
+    if (!editTitle.trim()) return;
+    try {
+      const res = await fetch(`/api/notes/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: editTitle, content: editContent }),
+      });
+      if (res.ok) {
+        setEditingId(null); // Vypne režim editace
+        fetchNotes(); // Znovu stáhne aktuální data z databáze
+      }
+    } catch (error) {
+      console.error("Chyba při úpravě", error);
+    }
+  };
   // UI pro načítání relace
   if (status === "loading") {
     return <div className="p-8 text-gray-500">Ověřování relace...</div>;
@@ -136,14 +181,49 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {notes.map((note) => (
-                <div key={note.id} className="bg-white p-6 rounded shadow border-l-4 border-blue-500">
-                  <h3 className="text-lg font-bold mb-2">{note.title}</h3>
-                  {note.content && (
-                    <p className="text-gray-700 whitespace-pre-wrap">{note.content}</p>
+                <div key={note.id} className="bg-white p-6 rounded shadow border-l-4 border-blue-500 relative">
+                  
+                  {/* Podmínka: Pokud editujeme, ukaž formulář, jinak ukaž normální text */}
+                  {editingId === note.id ? (
+                    <div className="flex flex-col gap-3">
+                      <input 
+                        type="text" 
+                        value={editTitle} 
+                        onChange={(e) => setEditTitle(e.target.value)} 
+                        className="border p-2 rounded text-black font-bold"
+                      />
+                      <textarea 
+                        value={editContent} 
+                        onChange={(e) => setEditContent(e.target.value)} 
+                        rows={3} 
+                        className="border p-2 rounded text-black"
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <button onClick={() => handleUpdate(note.id)} className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition">Uložit</button>
+                        <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 transition">Zrušit</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Tlačítka pro mazání a editaci */}
+                      <div className="absolute top-4 right-4 flex gap-3 text-xl">
+                        <button onClick={() => startEditing(note)} className="hover:scale-110 transition" title="Upravit záznam">
+                          ✏️
+                        </button>
+                        <button onClick={() => handleDelete(note.id)} className="hover:scale-110 transition" title="Odstranit záznam">
+                          🗑️
+                        </button>
+                      </div>
+
+                      <h3 className="text-lg font-bold mb-2 pr-16">{note.title}</h3>
+                      {note.content && (
+                        <p className="text-gray-700 whitespace-pre-wrap">{note.content}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-4">
+                        Vytvořeno: {new Date(note.createdAt).toLocaleString('cs-CZ')}
+                      </p>
+                    </>
                   )}
-                  <p className="text-xs text-gray-400 mt-4">
-                    Vytvořeno: {new Date(note.createdAt).toLocaleString('cs-CZ')}
-                  </p>
                 </div>
               ))}
             </div>
